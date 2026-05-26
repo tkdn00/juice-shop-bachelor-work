@@ -3,8 +3,6 @@ name: DevSecOps Pipeline
 on:
   push:
     branches: ["master"]
-  pull_request:
-    branches: ["master"]
   workflow_dispatch:
 
 permissions:
@@ -284,5 +282,3 @@ jobs:
               body: body,
               labels: ['security', 'automated']
             });
-            # line to trigger action
-            # line to push
