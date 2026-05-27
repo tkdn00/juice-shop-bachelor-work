@@ -171,16 +171,16 @@ jobs:
 
             const comment = `## 🔐 Security Scan Results (Incremental)
 
-            | Етап | Статус | Примітка |
-            |------|--------|----------|
-            | ☁️ SAST (SonarCloud) | ${sonarStatus} | Тільки змінені файли |
-            | 🔍 SCA (Snyk) | ${snykStatus} | Тільки якщо змінились залежності |
-            | 🐳 Container Scan (Trivy) | ⏭️ Пропущено | Виконується після merge у master |
-            | 🕷️ DAST (ZAP) | ⏭️ Пропущено | Виконується після merge у master |
+            | Етап | Статус |
+            |------|--------|
+            | ☁️ SAST (SonarCloud) | ${sonarStatus} |
+            | 🔍 SCA (Snyk) | ${snykStatus} |
+            | 🐳 Container Scan (Trivy) | ⏭️ Пропущено — виконується після merge у master |
+            | 🕷️ DAST (ZAP) | ⏭️ Пропущено — виконується після merge у master |
 
             ---
 
-            > ⚡ Інкрементальне сканування значно швидше повного
+
             > 🔒 Повне сканування запуститься автоматично після merge у master
             `;
 
