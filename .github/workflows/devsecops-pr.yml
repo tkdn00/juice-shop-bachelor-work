@@ -167,8 +167,7 @@ jobs:
             const sonarMajor = '${{ steps.sonar.outputs.major }}';
             const sonarMinor = '${{ steps.sonar.outputs.minor }}';
             const sonarUrl = 'https://sonarcloud.io/project/overview?id=tkdn00_juice-shop-bachelor-work';
-            const sonarStatus = `✅ Critical: ${sonarCritical} | Major: ${sonarMajor} | Minor: ${sonarMinor} | [Дашборд](${sonarUrl})`;
-
+            const sonarStatus = `✅ Critical: ${sonarCritical} · Major: ${sonarMajor} · Minor: ${sonarMinor} · [Дашборд](${sonarUrl})`;
             const comment = `## 🔐 Security Scan Results (Incremental)
 
             | Етап | Статус | Примітка |
