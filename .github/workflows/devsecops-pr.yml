@@ -14,7 +14,6 @@ permissions:
 jobs:
   # ─────────────────────────────────────────
   # JOB 1: SAST - SonarCloud
-  # Автоматично аналізує тільки змінені файли у PR
   # ─────────────────────────────────────────
   sast-incremental:
     name: SAST - SonarCloud (PR)
@@ -37,7 +36,6 @@ jobs:
 
   # ─────────────────────────────────────────
   # JOB 2: SCA - Snyk
-  # Запускається тільки якщо змінились залежності
   # ─────────────────────────────────────────
   sca-incremental:
     name: SCA - Snyk (changed deps only)
@@ -85,7 +83,6 @@ jobs:
 
   # ─────────────────────────────────────────
   # JOB 3: Вимірювання часу
-  # Фіксує час виконання для порівняння
   # ─────────────────────────────────────────
   timing:
     name: Pipeline Timing
@@ -96,7 +93,6 @@ jobs:
       - name: Log timing
         run: |
           echo "=== INCREMENTAL PIPELINE TIMING ==="
-          echo "Start time: ${{ github.event.pull_request.created_at }}"
           echo "Jobs completed: SAST + SCA only"
           echo "Skipped: Trivy, ZAP (full scan on master only)"
 
@@ -109,16 +105,76 @@ jobs:
     needs: [sast-incremental, sca-incremental]
     if: always()
     steps:
-      - name: Comment on PR
+      - uses: actions/checkout@v4
+
+      - name: Download Snyk report
+        uses: actions/download-artifact@v4
+        with:
+          name: snyk-report-pr
+        continue-on-error: true
+
+      - name: Get SonarCloud results
+        id: sonar
+        run: |
+          RESPONSE=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: \
+            "https://sonarcloud.io/api/issues/search?projectKeys=tkdn00_juice-shop-bachelor-work&types=VULNERABILITY&severities=CRITICAL,MAJOR,MINOR&resolved=false")
+
+          CRITICAL=$(echo $RESPONSE | python3 -c "
+          import json,sys
+          data=json.load(sys.stdin)
+          print(sum(1 for i in data.get('issues',[]) if i.get('severity')=='CRITICAL'))
+          " 2>/dev/null || echo "0")
+
+          MAJOR=$(echo $RESPONSE | python3 -c "
+          import json,sys
+          data=json.load(sys.stdin)
+          print(sum(1 for i in data.get('issues',[]) if i.get('severity')=='MAJOR'))
+          " 2>/dev/null || echo "0")
+
+          MINOR=$(echo $RESPONSE | python3 -c "
+          import json,sys
+          data=json.load(sys.stdin)
+          print(sum(1 for i in data.get('issues',[]) if i.get('severity')=='MINOR'))
+          " 2>/dev/null || echo "0")
+
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+          echo "minor=$MINOR" >> $GITHUB_OUTPUT
+
+      - name: Create PR comment
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
+
+            // Парсимо Snyk звіт
+            let snykCritical = 0, snykHigh = 0, snykMedium = 0;
+            let snykStatus = '⏭️ Пропущено (залежності не змінились)';
+            try {
+              const snyk = JSON.parse(fs.readFileSync('snyk-report-pr.json', 'utf8'));
+              for (const v of snyk.vulnerabilities || []) {
+                if (v.severity === 'critical') snykCritical++;
+                if (v.severity === 'high') snykHigh++;
+                if (v.severity === 'medium') snykMedium++;
+              }
+              snykStatus = `✅ Critical: ${snykCritical} | High: ${snykHigh} | Medium: ${snykMedium}`;
+            } catch(e) {
+              snykStatus = '⏭️ Пропущено (залежності не змінились)';
+            }
+
+            // SonarCloud дані
+            const sonarCritical = '${{ steps.sonar.outputs.critical }}';
+            const sonarMajor = '${{ steps.sonar.outputs.major }}';
+            const sonarMinor = '${{ steps.sonar.outputs.minor }}';
+            const sonarUrl = 'https://sonarcloud.io/project/overview?id=tkdn00_juice-shop-bachelor-work';
+            const sonarStatus = `✅ Critical: ${sonarCritical} | Major: ${sonarMajor} | Minor: ${sonarMinor} | [Дашборд](${sonarUrl})`;
+
             const comment = `## 🔐 Security Scan Results (Incremental)
 
             | Етап | Статус | Примітка |
             |------|--------|----------|
-            | ☁️ SAST (SonarCloud) | ✅ Виконано | Тільки змінені файли |
-            | 🔍 SCA (Snyk) | ✅ Виконано | Тільки якщо змінились залежності |
+            | ☁️ SAST (SonarCloud) | ${sonarStatus} | Тільки змінені файли |
+            | 🔍 SCA (Snyk) | ${snykStatus} | Тільки якщо змінились залежності |
             | 🐳 Container Scan (Trivy) | ⏭️ Пропущено | Виконується після merge у master |
             | 🕷️ DAST (ZAP) | ⏭️ Пропущено | Виконується після merge у master |
 
