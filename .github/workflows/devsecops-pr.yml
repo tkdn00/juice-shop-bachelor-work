@@ -1,4 +1,6 @@
 name: DevSecOps Pipeline - PR (Incremental)
+# DevSecOps Pipeline - Incremental PR scan for security analysis
+
 
 on:
   pull_request:
