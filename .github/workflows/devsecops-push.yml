@@ -318,10 +318,12 @@ jobs:
 
             ---
 
-            ### 🔗 Корисні посилання
+            ### 🔗 Посилання на звіти та артефакти
             - [SonarCloud Dashboard](https://sonarcloud.io/project/overview?id=tkdn00_juice-shop-bachelor-work)
             - [GitHub Actions Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             - [🕷️ ZAP HTML Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)
+            - [Snyk Dashboard](https://app.snyk.io/org/tkdn00/project/ecb21cc9-a349-44b4-8857-7ead38129037)
+
 
             > Автоматично згенеровано DevSecOps pipeline`;
 
