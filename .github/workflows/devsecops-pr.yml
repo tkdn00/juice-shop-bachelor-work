@@ -117,29 +117,25 @@ jobs:
         id: sonar
         run: |
           RESPONSE=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: \
-            "https://sonarcloud.io/api/issues/search?projectKeys=tkdn00_juice-shop-bachelor-work&types=VULNERABILITY&severities=CRITICAL,MAJOR,MINOR&resolved=false")
+            "https://sonarcloud.io/api/issues/search?projectKeys=tkdn00_juice-shop-bachelor-work&types=VULNERABILITY&resolved=false&ps=1")
 
-          CRITICAL=$(echo $RESPONSE | python3 -c "
+          TOTAL=$(echo $RESPONSE | python3 -c "
           import json,sys
           data=json.load(sys.stdin)
-          print(sum(1 for i in data.get('issues',[]) if i.get('severity')=='CRITICAL'))
+          print(data.get('total', 0))
           " 2>/dev/null || echo "0")
 
-          MAJOR=$(echo $RESPONSE | python3 -c "
-          import json,sys
-          data=json.load(sys.stdin)
-          print(sum(1 for i in data.get('issues',[]) if i.get('severity')=='MAJOR'))
-          " 2>/dev/null || echo "0")
+          BLOCKER=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: \
+            "https://sonarcloud.io/api/issues/search?projectKeys=tkdn00_juice-shop-bachelor-work&types=VULNERABILITY&severities=BLOCKER&resolved=false&ps=1" | python3 -c "
+          import json,sys; data=json.load(sys.stdin); print(data.get('total',0))" 2>/dev/null || echo "0")
 
-          MINOR=$(echo $RESPONSE | python3 -c "
-          import json,sys
-          data=json.load(sys.stdin)
-          print(sum(1 for i in data.get('issues',[]) if i.get('severity')=='MINOR'))
-          " 2>/dev/null || echo "0")
+          MEDIUM=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: \
+            "https://sonarcloud.io/api/issues/search?projectKeys=tkdn00_juice-shop-bachelor-work&types=VULNERABILITY&severities=MAJOR&resolved=false&ps=1" | python3 -c "
+          import json,sys; data=json.load(sys.stdin); print(data.get('total',0))" 2>/dev/null || echo "0")
 
-          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
-          echo "major=$MAJOR" >> $GITHUB_OUTPUT
-          echo "minor=$MINOR" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "blocker=$BLOCKER" >> $GITHUB_OUTPUT
+          echo "medium=$MEDIUM" >> $GITHUB_OUTPUT
 
       - name: Create PR comment
         uses: actions/github-script@v7
@@ -157,17 +153,17 @@ jobs:
                 if (v.severity === 'high') snykHigh++;
                 if (v.severity === 'medium') snykMedium++;
               }
-              snykStatus = `✅ Critical: ${snykCritical} | High: ${snykHigh} | Medium: ${snykMedium}`;
+              snykStatus = `✅ Critical: ${snykCritical} · High: ${snykHigh} · Medium: ${snykMedium}`;
             } catch(e) {
               snykStatus = '⏭️ Пропущено (залежності не змінились)';
             }
 
             // SonarCloud дані
-            const sonarCritical = '${{ steps.sonar.outputs.critical }}';
-            const sonarMajor = '${{ steps.sonar.outputs.major }}';
-            const sonarMinor = '${{ steps.sonar.outputs.minor }}';
+            const sonarTotal = '${{ steps.sonar.outputs.total }}';
+            const sonarBlocker = '${{ steps.sonar.outputs.blocker }}';
+            const sonarMedium = '${{ steps.sonar.outputs.medium }}';
             const sonarUrl = 'https://sonarcloud.io/project/overview?id=tkdn00_juice-shop-bachelor-work';
-            const sonarStatus = `✅ Critical: ${sonarCritical} · Major: ${sonarMajor} · Minor: ${sonarMinor} · [Дашборд](${sonarUrl})`;
+            const sonarStatus = `✅ Blocker: ${sonarBlocker} · Medium: ${sonarMedium} · Total: ${sonarTotal} · [Дашборд](${sonarUrl})`;
             const comment = `## 🔐 Security Scan Results (Incremental)
 
             | Етап | Статус |
