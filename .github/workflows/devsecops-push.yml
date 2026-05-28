@@ -160,7 +160,6 @@ jobs:
         run: |
           echo "=== QUALITY GATE CHECK ==="
 
-          # Перевірка Trivy на CRITICAL
           TRIVY_CRITICAL=$(cat trivy-report.json | python3 -c "
           import json, sys
           data = json.load(sys.stdin)
@@ -172,7 +171,6 @@ jobs:
           print(count)
           " 2>/dev/null || echo "0")
 
-          # Перевірка Snyk на CRITICAL
           SNYK_CRITICAL=$(cat snyk-report-node22.json | python3 -c "
           import json, sys
           data = json.load(sys.stdin)
@@ -203,6 +201,12 @@ jobs:
     if: always()
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download Trivy report
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-report
+        continue-on-error: true
 
       - name: Download Snyk report
         uses: actions/download-artifact@v4
@@ -280,8 +284,6 @@ jobs:
               snykTotal = (snyk.vulnerabilities || []).length;
             } catch(e) { console.log('Snyk report not found'); }
 
-            const totalCritical = trivyCritical + snykTotal;
-            const totalHigh = trivyHigh;
             const status = trivyCritical > 0 ? '❌ FAILED' : '✅ PASSED';
 
             const sonarBlocker = '${{ steps.sonar.outputs.blocker }}';
